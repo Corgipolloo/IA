@@ -1,0 +1,195 @@
+{
+  "name": "AI Video Dubbing Pipeline - ES",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dubbing-start",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "node-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [220, 300],
+      "webhookId": "dubbing-start"
+    },
+    {
+      "parameters": {
+        "command": "=cd /opt/ai_video_dubbing && python3 -c \"\nimport sys, json\nfrom step1_download import download_video\nurl = '{{ $json.video_url }}'\nout = download_video(url)\nprint(json.dumps({'video_path': out, 'video_url': url}))\n\""
+      },
+      "id": "node-download",
+      "name": "1. Descargar Video",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "command": "=cd /opt/ai_video_dubbing && python3 -c \"\nimport json\nfrom step2_transcribe import transcribe\nvideo = '{{ $json.video_path }}'\nresult = transcribe(video)\nprint(json.dumps(result))\n\""
+      },
+      "id": "node-transcribe",
+      "name": "2. Transcribir (Whisper)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "command": "=cd /opt/ai_video_dubbing && python3 -c \"\nimport json\nfrom step3_rewrite_dialogue import rewrite_segments\nsegments = {{ JSON.stringify($json.segments) }}\nrewritten = rewrite_segments(segments)\nprint(json.dumps({'segments': rewritten, 'video_path': '{{ $json.video_path }}', 'video_duration': {{ $json.video_duration }} }))\n\""
+      },
+      "id": "node-translate",
+      "name": "3. Traducir/Reescribir ES",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// speaking_rate_calculator.js embebido\nconst LOG_PREFIX = '[speaking_rate]';\nfunction log(msg) { console.log(`${LOG_PREFIX} ${msg}`); }\n\nfunction countSpanishSyllables(text) {\n  if (!text || typeof text !== 'string') return 0;\n  let clean = text.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z\\s']/g, ' ').replace(/\\s+/g, ' ').trim();\n  if (clean.length === 0) return 0;\n  const words = clean.split(' ').filter(w => w.length > 0);\n  let totalSyllables = 0;\n  const strongVowels = new Set(['a','e','o']);\n  const allVowels = new Set(['a','e','i','o','u']);\n  for (const word of words) {\n    let syllables = 0, i = 0;\n    while (i < word.length) {\n      if (!allVowels.has(word[i])) { i++; continue; }\n      syllables++;\n      const isStrong = strongVowels.has(word[i]);\n      i++;\n      while (i < word.length && allVowels.has(word[i])) {\n        if (isStrong && strongVowels.has(word[i])) break;\n        i++;\n      }\n    }\n    totalSyllables += Math.max(syllables, 1);\n  }\n  return totalSyllables;\n}\n\nconst NORMAL_RATE = 5.0, MIN_RATE = 0.75, MAX_RATE = 1.35, PAD = 0.15;\nconst data = $input.first().json;\nconst segments = data.segments.map((seg, idx) => {\n  const targetDuration = Math.max(0.1, (seg.end - seg.start) - PAD * 2);\n  const syls = countSpanishSyllables(seg.new_text || seg.text || '');\n  if (syls === 0) return { ...seg, speaking_rate: 1.0, target_duration: targetDuration, estimated_syllables: 0, syllables_per_second: 0, warnings: [] };\n  const reqSylsPerSec = syls / targetDuration;\n  let rate = Math.max(MIN_RATE, Math.min(MAX_RATE, reqSylsPerSec / NORMAL_RATE));\n  const warnings = [];\n  if (reqSylsPerSec > 6.5) warnings.push('High density: ' + reqSylsPerSec.toFixed(1) + ' syl/s');\n  return { ...seg, speaking_rate: Math.round(rate * 100) / 100, target_duration: targetDuration, estimated_syllables: syls, syllables_per_second: Math.round(reqSylsPerSec * 100) / 100, warnings };\n});\nreturn [{ json: { segments, video_path: data.video_path, video_duration: data.video_duration } }];"
+      },
+      "id": "node-speaking-rate",
+      "name": "4. Calcular Speaking Rate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 300]
+    },
+    {
+      "parameters": {
+        "command": "=cd /opt/ai_video_dubbing && python3 -c \"\nimport json\nfrom step4_generate_audio import generate_audio_segments\nsegments = json.loads('{{ JSON.stringify($json.segments).replace(/'/g, \"\\\\'\") }}')\naudio_dir = generate_audio_segments(segments)\nprint(json.dumps({'audio_dir': audio_dir, 'segments': segments, 'video_path': '{{ $json.video_path }}', 'video_duration': {{ $json.video_duration }} }))\n\""
+      },
+      "id": "node-tts",
+      "name": "5. Generar Audio (Edge TTS)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1420, 300]
+    },
+    {
+      "parameters": {
+        "command": "=SEGMENTS='{{ JSON.stringify($json.segments) }}'\nVIDEO='{{ $json.video_path }}'\nAUDIO_DIR='{{ $json.audio_dir }}'\nTIMESTAMPS_FILE=\"${AUDIO_DIR}/timestamps.json\"\n\n# Crear timestamps JSON desde segmentos\npython3 -c \"\nimport json\nsegs = json.loads('$SEGMENTS'.replace(\\\"'\\\", \\\"\\\\'\\\"))\nts = [{'file': f'segment_{str(i+1).zfill(3)}.wav', 'start': s['start']} for i, s in enumerate(segs)]\nwith open('$TIMESTAMPS_FILE', 'w') as f: json.dump(ts, f)\n\"\n\n# Ejecutar sync\nbash /opt/ai_video_dubbing/n8n_scripts/sync_audio.sh \"$VIDEO\" \"$AUDIO_DIR\" \"$TIMESTAMPS_FILE\" \"/opt/ai_video_dubbing/temp/dubbed_raw.mp4\"\necho '{\"dubbed_video\": \"/opt/ai_video_dubbing/temp/dubbed_raw.mp4\", \"video_duration\": {{ $json.video_duration }}, \"segments\": {{ JSON.stringify($json.segments) }} }'"
+      },
+      "id": "node-sync",
+      "name": "6. Sincronizar Audio+Video",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1660, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// circular_structure.js embebido - reordena en narrativa circular\nconst data = $input.first().json;\nconst { video_duration, segments, dubbed_video } = data;\nconst outputVideo = '/opt/ai_video_dubbing/output/final_circular.mp4';\n\nfunction findHookSegment(segs, dur) {\n  const min = dur * 0.75, max = dur * 0.90, mid = (min + max) / 2;\n  let best = null, bestDist = Infinity;\n  for (const s of segs) {\n    const sm = (s.start + s.end) / 2;\n    if (sm >= min && sm <= max) {\n      const d = Math.abs(sm - mid);\n      if (d < bestDist) { bestDist = d; best = s; }\n    }\n  }\n  if (!best) {\n    const t80 = dur * 0.80;\n    for (const s of segs) { const d = Math.abs(s.start - t80); if (d < bestDist) { bestDist = d; best = s; } }\n  }\n  return best;\n}\n\nfunction fmt(sec) {\n  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = (sec%60).toFixed(3);\n  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${s.padStart(6,'0')}`;\n}\n\nconst hook = findHookSegment(segments, video_duration);\nconst tmp = '/opt/ai_video_dubbing/temp/circular';\nconst esc = s => s.replace(/'/g, \"'\\\\''\");\nconst commands = [\n  `mkdir -p '${tmp}'`,\n  `ffmpeg -y -i '${esc(dubbed_video)}' -ss ${fmt(hook.start)} -t ${(hook.end-hook.start).toFixed(3)} -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k -avoid_negative_ts make_zero '${tmp}/p1_hook.mp4'`,\n  `ffmpeg -y -f lavfi -i color=c=black:s=1920x1080:d=3:r=30 -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -vf \"drawtext=text='Pero todo empezo asi...':fontcolor=white:fontsize=72:font=Arial:x=(w-text_w)/2:y=(h-text_h)/2:alpha='if(lt(t,0.5),t/0.5,if(gt(t,2.5),(3-t)/0.5,1))'\" -t 3 -c:v libx264 -preset fast -crf 18 -c:a aac -shortest '${tmp}/p2_trans.mp4'`,\n  `ffmpeg -y -i '${esc(dubbed_video)}' -ss 00:00:00.000 -to ${fmt(hook.start)} -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k -avoid_negative_ts make_zero '${tmp}/p3_body.mp4'`,\n  `ffmpeg -y -i '${esc(dubbed_video)}' -ss ${fmt(Math.max(0, video_duration-30))} -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k -avoid_negative_ts make_zero '${tmp}/p4_close.mp4'`,\n  `printf \"file '${tmp}/p1_hook.mp4'\\nfile '${tmp}/p2_trans.mp4'\\nfile '${tmp}/p3_body.mp4'\\nfile '${tmp}/p4_close.mp4'\" > '${tmp}/list.txt'`,\n  `ffmpeg -y -f concat -safe 0 -i '${tmp}/list.txt' -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k '${esc(outputVideo)}'`,\n  `rm -rf '${tmp}'`\n];\n\nreturn [{ json: { ffmpeg_commands: commands, output_video: outputVideo, video_duration } }];"
+      },
+      "id": "node-circular",
+      "name": "7. Estructura Circular",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1900, 300]
+    },
+    {
+      "parameters": {
+        "command": "={{ $json.ffmpeg_commands.join(' && ') }}\necho '{\"output_video\": \"{{ $json.output_video }}\", \"video_duration\": {{ $json.video_duration }} }'"
+      },
+      "id": "node-exec-circular",
+      "name": "8. Ejecutar FFmpeg Circular",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2140, 300]
+    },
+    {
+      "parameters": {
+        "command": "=bash /opt/ai_video_dubbing/n8n_scripts/clip_cutter.sh '{{ $json.output_video }}' '/opt/ai_video_dubbing/output/clips' 180\nCLIP_COUNT=$(ls -1 /opt/ai_video_dubbing/output/clips/clip_*.mp4 2>/dev/null | wc -l)\necho \"{\\\"clips_dir\\\": \\\"/opt/ai_video_dubbing/output/clips\\\", \\\"clip_count\\\": $CLIP_COUNT, \\\"output_video\\\": \\\"{{ $json.output_video }}\\\"}\""
+      },
+      "id": "node-clip",
+      "name": "9. Cortar en Clips",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2380, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{\n  json: {\n    success: true,\n    message: 'Pipeline completado exitosamente',\n    full_video: data.output_video,\n    clips_directory: data.clips_dir,\n    total_clips: data.clip_count,\n    pipeline: [\n      '1. Video descargado',\n      '2. Transcrito con Whisper',\n      '3. Traducido/reescrito a espanol',\n      '4. Speaking rate calculado',\n      '5. Audio generado con Edge TTS',\n      '6. Audio sincronizado con video',\n      '7. Estructura circular aplicada',\n      '8. Cortado en clips para redes'\n    ]\n  }\n}];"
+      },
+      "id": "node-response",
+      "name": "10. Respuesta Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2620, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nodo de error global\nconst error = $input.first().json;\nreturn [{\n  json: {\n    success: false,\n    error: error.message || 'Error desconocido en el pipeline',\n    node: error.node || 'unknown',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-error",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1420, 520]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{ "node": "1. Descargar Video", "type": "main", "index": 0 }]
+      ]
+    },
+    "1. Descargar Video": {
+      "main": [
+        [{ "node": "2. Transcribir (Whisper)", "type": "main", "index": 0 }]
+      ]
+    },
+    "2. Transcribir (Whisper)": {
+      "main": [
+        [{ "node": "3. Traducir/Reescribir ES", "type": "main", "index": 0 }]
+      ]
+    },
+    "3. Traducir/Reescribir ES": {
+      "main": [
+        [{ "node": "4. Calcular Speaking Rate", "type": "main", "index": 0 }]
+      ]
+    },
+    "4. Calcular Speaking Rate": {
+      "main": [
+        [{ "node": "5. Generar Audio (Edge TTS)", "type": "main", "index": 0 }]
+      ]
+    },
+    "5. Generar Audio (Edge TTS)": {
+      "main": [
+        [{ "node": "6. Sincronizar Audio+Video", "type": "main", "index": 0 }]
+      ]
+    },
+    "6. Sincronizar Audio+Video": {
+      "main": [
+        [{ "node": "7. Estructura Circular", "type": "main", "index": 0 }]
+      ]
+    },
+    "7. Estructura Circular": {
+      "main": [
+        [{ "node": "8. Ejecutar FFmpeg Circular", "type": "main", "index": 0 }]
+      ]
+    },
+    "8. Ejecutar FFmpeg Circular": {
+      "main": [
+        [{ "node": "9. Cortar en Clips", "type": "main", "index": 0 }]
+      ]
+    },
+    "9. Cortar en Clips": {
+      "main": [
+        [{ "node": "10. Respuesta Final", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "dubbing" },
+    { "name": "video" },
+    { "name": "automation" }
+  ],
+  "triggerCount": 1,
+  "pinData": {}
+}
