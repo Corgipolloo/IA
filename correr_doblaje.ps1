@@ -46,7 +46,8 @@ Write-Host "  ffmpeg OK" -ForegroundColor Green
 
 # --- 3. Instalar yt-dlp y paquetes Python ---
 Write-Host "[3/6] Instalando paquetes de Python..." -ForegroundColor Yellow
-pip install --quiet yt-dlp openai-whisper edge-tts moviepy 2>&1 | Out-Null
+$env:PIP_QUIET = "1"
+& python -m pip install yt-dlp openai-whisper edge-tts moviepy 2>$null
 Write-Host "  Paquetes OK" -ForegroundColor Green
 
 # --- 4. Clonar o actualizar repo ---
