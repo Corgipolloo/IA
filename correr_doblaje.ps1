@@ -2,7 +2,7 @@
 # Uso: Click derecho -> Ejecutar con PowerShell
 #   o desde terminal: powershell -ExecutionPolicy Bypass -File correr_doblaje.ps1
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $VIDEO_URL = "https://youtu.be/eOUfemUXMxk"
 $REPO_DIR = "$HOME\IA"
 $PROJECT_DIR = "$REPO_DIR\ai_video_dubbing"
@@ -45,9 +45,10 @@ if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
 Write-Host "  ffmpeg OK" -ForegroundColor Green
 
 # --- 3. Instalar yt-dlp y paquetes Python ---
-Write-Host "[3/6] Instalando paquetes de Python..." -ForegroundColor Yellow
-$env:PIP_QUIET = "1"
-& python -m pip install yt-dlp openai-whisper edge-tts moviepy 2>$null
+Write-Host "[3/6] Instalando paquetes de Python (puede tardar)..." -ForegroundColor Yellow
+$ErrorActionPreference = "SilentlyContinue"
+python -m pip install yt-dlp openai-whisper edge-tts moviepy 2>&1 | ForEach-Object { if ($_ -match "Successfully") { Write-Host "  $_" -ForegroundColor Green } }
+$ErrorActionPreference = "Continue"
 Write-Host "  Paquetes OK" -ForegroundColor Green
 
 # --- 4. Clonar o actualizar repo ---
