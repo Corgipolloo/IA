@@ -24,6 +24,7 @@ def download_video(url: str, output_name: str = "video_original") -> str:
 
     cmd = [
         "yt-dlp",
+        "--no-check-certificates",
         "-f", "bestvideo[height<=720]+bestaudio/best[height<=720]",
         "--merge-output-format", "mp4",
         "-o", output_path,
@@ -39,6 +40,7 @@ def download_video(url: str, output_name: str = "video_original") -> str:
         # Intentar formato más simple
         cmd_simple = [
             "yt-dlp",
+            "--no-check-certificates",
             "-f", "best[height<=720]",
             "-o", output_path,
             "--no-playlist",
