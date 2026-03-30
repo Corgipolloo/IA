@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-🎬 AI VIDEO DUBBING PIPELINE - 100% GRATUITO
+ AI VIDEO DUBBING PIPELINE - 100% GRATUITO
 =============================================
 Workflow completo para doblar videos con IA:
 
 1. Descarga video de YouTube (yt-dlp)
 2. Transcribe audio (Whisper - local, gratis)
-3. Reescribe diálogos (motor de sinónimos local)
+3. Reescribe dialogos (motor de sinnimos local)
 4. Genera nueva voz (Edge TTS - Microsoft, gratis)
-5. Compone video final con subtítulos (ffmpeg)
+5. Compone video final con subttulos (ffmpeg)
 
 Uso:
     python run_pipeline.py <URL_VIDEO> [--voice VOICE] [--output NOMBRE]
@@ -37,17 +37,9 @@ from step5_compose_video import create_subtitle_file, compose_final_video, get_v
 
 
 def print_banner():
-    print("""
-╔═══════════════════════════════════════════════════╗
-║        🎬 AI VIDEO DUBBING TOOL                  ║
-║        100% GRATUITO - Sin APIs de pago           ║
-╠═══════════════════════════════════════════════════╣
-║  Whisper  → Transcripción (local, gratis)         ║
-║  Edge TTS → Voz IA (Microsoft, gratis)            ║
-║  ffmpeg   → Edición de video (open source)        ║
-║  yt-dlp   → Descarga de videos (open source)      ║
-╚═══════════════════════════════════════════════════╝
-""")
+    print("=" * 50)
+    print("  AI VIDEO DUBBING TOOL - 100% GRATUITO")
+    print("=" * 50)
 
 
 def run_pipeline(url: str, voice: str = None, output_name: str = "video_doblado"):
@@ -56,38 +48,38 @@ def run_pipeline(url: str, voice: str = None, output_name: str = "video_doblado"
     print_banner()
     start_time = time.time()
 
-    # ═══ PASO 1: Descargar video ═══
+    #  PASO 1: Descargar video 
     print("\n" + "=" * 50)
-    print("📥 PASO 1/5: Descargando video...")
+    print("PASO 1/5: Descargando video...")
     print("=" * 50)
     video_path = download_video(url, "video_original")
     audio_path = extract_audio(video_path)
     video_duration = get_video_duration(video_path)
-    print(f"   Duración del video: {video_duration:.1f} segundos")
+    print(f"   Duracion del video: {video_duration:.1f} segundos")
 
-    # ═══ PASO 2: Transcribir ═══
+    #  PASO 2: Transcribir 
     print("\n" + "=" * 50)
-    print("🎤 PASO 2/5: Transcribiendo audio con Whisper...")
+    print("PASO 2/5: Transcribiendo audio con Whisper...")
     print("=" * 50)
     segments = transcribe_audio(audio_path)
     srt_original = segments_to_srt(segments)
-    print(f"   {len(segments)} segmentos de diálogo encontrados")
+    print(f"   {len(segments)} segmentos de dialogo encontrados")
 
-    # ═══ PASO 3: Reescribir diálogos ═══
+    #  PASO 3: Reescribir dialogos 
     print("\n" + "=" * 50)
-    print("✍️ PASO 3/5: Reescribiendo diálogos...")
+    print("PASO 3/5: Reescribiendo dialogos...")
     print("=" * 50)
     rewritten = rewrite_all_segments(segments, style="narrador")
 
-    print("\n   Comparación de diálogos:")
+    print("\n   Comparacion de dialogos:")
     for seg in rewritten[:5]:  # Mostrar primeros 5
         print(f"   Original:  {seg['original_text'][:60]}")
         print(f"   Nuevo:     {seg['text'][:60]}")
         print()
 
-    # ═══ PASO 4: Generar audio ═══
+    #  PASO 4: Generar audio 
     print("\n" + "=" * 50)
-    print("🔊 PASO 4/5: Generando voz con IA (Edge TTS)...")
+    print("PASO 4/5: Generando voz con IA (Edge TTS)...")
     print("=" * 50)
     audio_files = asyncio.run(generate_all_audio(rewritten, voice))
 
@@ -95,48 +87,48 @@ def run_pipeline(url: str, voice: str = None, output_name: str = "video_doblado"
     dubbed_audio_path = os.path.join(TEMP_DIR, "dubbed_audio.wav")
     merge_audio_segments(audio_files, video_duration, dubbed_audio_path)
 
-    # ═══ PASO 5: Componer video final ═══
+    #  PASO 5: Componer video final 
     print("\n" + "=" * 50)
-    print("🎬 PASO 5/5: Componiendo video final...")
+    print("PASO 5/5: Componiendo video final...")
     print("=" * 50)
     subtitle_path = create_subtitle_file(rewritten)
     final_video = compose_final_video(
         video_path, dubbed_audio_path, subtitle_path, output_name
     )
 
-    # ═══ RESULTADO ═══
+    #  RESULTADO 
     elapsed = time.time() - start_time
     print("\n" + "=" * 50)
-    print("✅ ¡PROCESO COMPLETADO!")
+    print("PROCESO COMPLETADO!")
     print("=" * 50)
     print(f"   Video final: {final_video}")
-    print(f"   Subtítulos:  {subtitle_path}")
+    print(f"   Subttulos:  {subtitle_path}")
     print(f"   Tiempo total: {elapsed:.1f} segundos")
-    print(f"   Duración video: {video_duration:.1f} segundos")
+    print(f"   Duracion video: {video_duration:.1f} segundos")
 
     return final_video
 
 
 def demo_mode():
-    """Modo demo: muestra cómo funciona sin descargar un video."""
+    """Modo demo: muestra cmo funciona sin descargar un video."""
     print_banner()
-    print("🎯 MODO DEMO - Mostrando el flujo del pipeline\n")
+    print(" MODO DEMO - Mostrando el flujo del pipeline\n")
 
     # Crear segmentos de ejemplo
     demo_segments = [
         {"id": 0, "start": 0.0, "end": 3.5,
-         "text": "Este señor sabía que él comía en las praderas"},
+         "text": "Este seor saba que l coma en las praderas"},
         {"id": 1, "start": 3.5, "end": 7.0,
-         "text": "Pero ella tenía miedo de ir a la ciudad grande"},
+         "text": "Pero ella tena miedo de ir a la ciudad grande"},
         {"id": 2, "start": 7.0, "end": 11.5,
-         "text": "Entonces él decidió escapar porque tenía un problema"},
+         "text": "Entonces l decidi escapar porque tena un problema"},
         {"id": 3, "start": 11.5, "end": 15.0,
-         "text": "Al final encontró a su viejo amigo en el pueblo"},
+         "text": "Al final encontr a su viejo amigo en el pueblo"},
         {"id": 4, "start": 15.0, "end": 19.0,
-         "text": "Y después de la guerra ellos vivían en una casa pequeña"},
+         "text": "Y despus de la guerra ellos vivan en una casa pequea"},
     ]
 
-    print("📝 Diálogos originales vs reescritos:\n")
+    print(" Dilogos originales vs reescritos:\n")
     print("-" * 60)
 
     from step3_rewrite_dialogue import rewrite_all_segments
@@ -144,16 +136,16 @@ def demo_mode():
 
     for seg in rewritten:
         duration = seg["end"] - seg["start"]
-        print(f"⏱️  [{seg['start']:.1f}s - {seg['end']:.1f}s] ({duration:.1f}s)")
-        print(f"  📌 Original:  {seg['original_text']}")
-        print(f"  🔄 Reescrito: {seg['text']}")
+        print(f"  [{seg['start']:.1f}s - {seg['end']:.1f}s] ({duration:.1f}s)")
+        print(f"   Original:  {seg['original_text']}")
+        print(f"   Reescrito: {seg['text']}")
         print()
 
     print("\nVoces disponibles para el doblaje:")
     for name, voice_id in TTS_VOICES.items():
-        print(f"  🎙️  {name}: {voice_id}")
+        print(f"    {name}: {voice_id}")
 
-    print("\n💡 Para ejecutar con un video real:")
+    print("\n Para ejecutar con un video real:")
     print("   python run_pipeline.py 'https://youtube.com/watch?v=XXXXX'")
 
 
