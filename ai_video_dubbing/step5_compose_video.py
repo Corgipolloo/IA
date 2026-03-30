@@ -1,7 +1,7 @@
 """
 PASO 5: Componer el video final.
 - Reemplaza el audio original con el nuevo doblaje
-- Agrega subtítulos quemados en el video
+- Agrega subttulos quemados en el video
 - Exporta el resultado final
 """
 
@@ -16,7 +16,7 @@ from config import (
 
 
 def create_subtitle_file(segments: list, output_path: str = None) -> str:
-    """Crea archivo SRT con los diálogos reescritos."""
+    """Crea archivo SRT con los dilogos reescritos."""
     if output_path is None:
         output_path = os.path.join(TEMP_DIR, "subtitles_new.srt")
 
@@ -37,12 +37,12 @@ def create_subtitle_file(segments: list, output_path: str = None) -> str:
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
-    print(f"[✓] Subtítulos creados: {output_path}")
+    print(f"[] Subttulos creados: {output_path}")
     return output_path
 
 
 def get_video_duration(video_path: str) -> float:
-    """Obtiene la duración del video."""
+    """Obtiene la duracin del video."""
     cmd = [
         "ffprobe", "-v", "quiet",
         "-show_entries", "format=duration",
@@ -60,20 +60,20 @@ def compose_final_video(
     output_name: str = "video_doblado"
 ) -> str:
     """
-    Compone el video final con nuevo audio y subtítulos.
+    Compone el video final con nuevo audio y subttulos.
 
     Args:
         video_path: Ruta al video original
         new_audio_path: Ruta al audio del nuevo doblaje
-        subtitle_path: Ruta al archivo SRT de subtítulos
+        subtitle_path: Ruta al archivo SRT de subttulos
         output_name: Nombre del archivo de salida
     """
     output_path = os.path.join(OUTPUT_DIR, f"{output_name}.mp4")
 
-    # Escapar la ruta de subtítulos para el filtro de ffmpeg
+    # Escapar la ruta de subttulos para el filtro de ffmpeg
     sub_path_escaped = subtitle_path.replace("\\", "/").replace(":", "\\:")
 
-    # Componer video: video original + nuevo audio + subtítulos quemados
+    # Componer video: video original + nuevo audio + subttulos quemados
     cmd = [
         "ffmpeg", "-y",
         "-i", video_path,
@@ -104,13 +104,13 @@ def compose_final_video(
     print(f"[*] Componiendo video final...")
     print(f"    Video: {video_path}")
     print(f"    Audio: {new_audio_path}")
-    print(f"    Subtítulos: {subtitle_path}")
+    print(f"    Subttulos: {subtitle_path}")
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     if result.returncode != 0:
-        print(f"[!] Error con subtítulos quemados, intentando sin subtítulos...")
-        # Fallback: sin subtítulos quemados, copiar SRT aparte
+        print(f"[!] Error con subttulos quemados, intentando sin subttulos...")
+        # Fallback: sin subttulos quemados, copiar SRT aparte
         cmd_simple = [
             "ffmpeg", "-y",
             "-i", video_path,
@@ -130,12 +130,12 @@ def compose_final_video(
         if result.returncode != 0:
             raise RuntimeError(f"Error componiendo video: {result.stderr}")
 
-        # Copiar subtítulos junto al video
+        # Copiar subttulos junto al video
         srt_output = os.path.join(OUTPUT_DIR, f"{output_name}.srt")
         subprocess.run(["cp", subtitle_path, srt_output])
-        print(f"[✓] Subtítulos copiados: {srt_output}")
+        print(f"[] Subttulos copiados: {srt_output}")
 
-    print(f"[✓] Video final: {output_path}")
+    print(f"[] Video final: {output_path}")
     return output_path
 
 
@@ -145,7 +145,7 @@ def compose_without_new_audio(
     output_name: str = "video_subtitulado"
 ) -> str:
     """
-    Versión simplificada: solo agrega subtítulos al video original.
+    Versin simplificada: solo agrega subttulos al video original.
     """
     output_path = os.path.join(OUTPUT_DIR, f"{output_name}.mp4")
     sub_path_escaped = subtitle_path.replace("\\", "/").replace(":", "\\:")
@@ -160,13 +160,13 @@ def compose_without_new_audio(
         output_path
     ]
 
-    print(f"[*] Agregando subtítulos al video...")
+    print(f"[*] Agregando subttulos al video...")
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     if result.returncode != 0:
         raise RuntimeError(f"Error: {result.stderr}")
 
-    print(f"[✓] Video subtitulado: {output_path}")
+    print(f"[] Video subtitulado: {output_path}")
     return output_path
 
 
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     with open(segments_path, "r", encoding="utf-8") as f:
         segments = json.load(f)
 
-    # Crear subtítulos
+    # Crear subttulos
     srt_path = create_subtitle_file(segments)
 
     # Buscar video original
@@ -193,7 +193,7 @@ if __name__ == "__main__":
             break
 
     if not video_path:
-        print("[!] No se encontró el video original en downloads/")
+        print("[!] No se encontr el video original en downloads/")
         sys.exit(1)
 
     # Buscar audio combinado
@@ -202,5 +202,5 @@ if __name__ == "__main__":
     if os.path.exists(audio_path):
         compose_final_video(video_path, audio_path, srt_path)
     else:
-        print("[!] No se encontró audio doblado, usando solo subtítulos")
+        print("[!] No se encontr audio doblado, usando solo subttulos")
         compose_without_new_audio(video_path, srt_path)

@@ -1,6 +1,6 @@
 """
-PASO 3: Reescribir los diálogos manteniendo el mismo timing.
-Cambia las palabras pero mantiene el significado y la duración similar.
+PASO 3: Reescribir los dilogos manteniendo el mismo timing.
+Cambia las palabras pero mantiene el significado y la duracin similar.
 """
 
 import json
@@ -11,89 +11,89 @@ from config import TEMP_DIR
 
 
 def estimate_speech_duration(text: str, chars_per_second: float = 14.0) -> float:
-    """Estima cuántos segundos toma decir un texto en español."""
+    """Estima cuntos segundos toma decir un texto en espaol."""
     return len(text) / chars_per_second
 
 
 def rewrite_segment(text: str, target_duration: float, style: str = "narrador") -> str:
     """
-    Reescribe un segmento de diálogo para que tenga duración similar.
-    Usa sinónimos y paráfrasis para cambiar el texto.
+    Reescribe un segmento de dilogo para que tenga duracin similar.
+    Usa sinnimos y parfrasis para cambiar el texto.
 
     Args:
         text: Texto original
-        target_duration: Duración objetivo en segundos
+        target_duration: Duracin objetivo en segundos
         style: Estilo de reescritura
     """
-    # Diccionario de sinónimos/reemplazos comunes en español
+    # Diccionario de sinnimos/reemplazos comunes en espaol
     replacements = {
         # Pronombres y referencias
-        "él": "este sujeto",
+        "l": "este sujeto",
         "ella": "esta persona",
         "ellos": "estos individuos",
-        "este señor": "este sujeto",
+        "este seor": "este sujeto",
         "este hombre": "este individuo",
         "esta mujer": "esta persona",
         "el protagonista": "nuestro personaje",
         "la protagonista": "nuestra protagonista",
 
         # Verbos comunes
-        "sabía que": "tenía conocimiento de que",
-        "dijo que": "mencionó que",
-        "fue a": "se dirigió a",
-        "quería": "deseaba",
-        "tenía": "poseía",
-        "podía": "era capaz de",
-        "hacía": "realizaba",
-        "veía": "observaba",
-        "comía": "se alimentaba",
-        "vivía": "residía",
+        "saba que": "tena conocimiento de que",
+        "dijo que": "mencion que",
+        "fue a": "se dirigi a",
+        "quera": "deseaba",
+        "tena": "posea",
+        "poda": "era capaz de",
+        "haca": "realizaba",
+        "vea": "observaba",
+        "coma": "se alimentaba",
+        "viva": "resida",
         "trabajaba": "laboraba",
         "pensaba": "reflexionaba",
-        "sentía": "experimentaba",
+        "senta": "experimentaba",
         "llamaba": "denominaba",
-        "encontró": "halló",
-        "descubrió": "se percató de",
-        "decidió": "optó por",
-        "intentó": "trató de",
-        "logró": "consiguió",
-        "murió": "falleció",
-        "mató": "eliminó",
-        "escapó": "huyó",
-        "llegó": "arribó",
-        "salió": "partió",
+        "encontr": "hall",
+        "descubri": "se percat de",
+        "decidi": "opt por",
+        "intent": "trat de",
+        "logr": "consigui",
+        "muri": "falleci",
+        "mat": "elimin",
+        "escap": "huy",
+        "lleg": "arrib",
+        "sali": "parti",
 
         # Sustantivos
         "casa": "hogar",
         "dinero": "capital",
         "problema": "inconveniente",
-        "amigo": "compañero",
+        "amigo": "compaero",
         "enemigo": "adversario",
-        "familia": "núcleo familiar",
+        "familia": "ncleo familiar",
         "pueblo": "localidad",
-        "ciudad": "metrópoli",
-        "país": "nación",
+        "ciudad": "metrpoli",
+        "pas": "nacin",
         "mundo": "planeta",
         "vida": "existencia",
         "muerte": "deceso",
-        "guerra": "conflicto bélico",
-        "pelea": "confrontación",
+        "guerra": "conflicto blico",
+        "pelea": "confrontacin",
         "amor": "afecto",
         "miedo": "temor",
         "peligro": "riesgo",
 
         # Adjetivos
         "grande": "enorme",
-        "pequeño": "diminuto",
+        "pequeo": "diminuto",
         "bueno": "favorable",
         "malo": "desfavorable",
         "importante": "relevante",
-        "difícil": "complicado",
-        "fácil": "sencillo",
-        "rápido": "veloz",
+        "difcil": "complicado",
+        "fcil": "sencillo",
+        "rpido": "veloz",
         "lento": "pausado",
         "fuerte": "robusto",
-        "débil": "frágil",
+        "dbil": "frgil",
         "rico": "adinerado",
         "pobre": "humilde",
         "viejo": "anciano",
@@ -104,14 +104,14 @@ def rewrite_segment(text: str, target_duration: float, style: str = "narrador") 
         "pero": "sin embargo",
         "porque": "debido a que",
         "entonces": "en consecuencia",
-        "después": "posteriormente",
+        "despus": "posteriormente",
         "antes": "previamente",
         "mientras": "entre tanto",
-        "también": "además",
+        "tambin": "adems",
         "sin embargo": "no obstante",
         "por eso": "por tal motivo",
         "al final": "finalmente",
-        "de repente": "súbitamente",
+        "de repente": "sbitamente",
         "en ese momento": "en aquel instante",
         "por ejemplo": "a modo de ejemplo",
         "es decir": "en otras palabras",
@@ -131,7 +131,7 @@ def rewrite_segment(text: str, target_duration: float, style: str = "narrador") 
     if rewritten:
         rewritten = rewritten[0].upper() + rewritten[1:]
 
-    # Ajustar longitud si es muy diferente a la duración objetivo
+    # Ajustar longitud si es muy diferente a la duracin objetivo
     estimated_duration = estimate_speech_duration(rewritten)
 
     if estimated_duration > target_duration * 1.3:
@@ -154,11 +154,11 @@ def rewrite_segment(text: str, target_duration: float, style: str = "narrador") 
 
 def rewrite_all_segments(segments: list, style: str = "narrador") -> list:
     """
-    Reescribe todos los segmentos de diálogo.
+    Reescribe todos los segmentos de dilogo.
 
     Args:
         segments: Lista de segmentos con start, end, text
-        style: Estilo de narración
+        style: Estilo de narracin
 
     Returns:
         Lista de segmentos reescritos con el mismo timing
@@ -183,16 +183,16 @@ def rewrite_all_segments(segments: list, style: str = "narrador") -> list:
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(rewritten_segments, f, ensure_ascii=False, indent=2)
 
-    print(f"[✓] Diálogos reescritos guardados: {json_path}")
+    print(f"[] Dilogos reescritos guardados: {json_path}")
     return rewritten_segments
 
 
 if __name__ == "__main__":
-    # Cargar transcripción existente
+    # Cargar transcripcin existente
     json_path = os.path.join(TEMP_DIR, "transcription.json")
 
     if not os.path.exists(json_path):
-        print("[!] No se encontró transcription.json. Ejecuta step2 primero.")
+        print("[!] No se encontr transcription.json. Ejecuta step2 primero.")
         sys.exit(1)
 
     with open(json_path, "r", encoding="utf-8") as f:
@@ -201,7 +201,7 @@ if __name__ == "__main__":
     style = sys.argv[1] if len(sys.argv) > 1 else "narrador"
     rewritten = rewrite_all_segments(data["segments"], style)
 
-    print(f"\nComparación de diálogos:")
+    print(f"\nComparacin de dilogos:")
     print("-" * 60)
     for seg in rewritten:
         print(f"[{seg['start']:.1f}s - {seg['end']:.1f}s]")

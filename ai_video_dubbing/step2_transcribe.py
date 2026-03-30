@@ -1,6 +1,6 @@
 """
 PASO 2: Transcribir el audio usando Whisper (OpenAI, gratuito y local).
-Genera subtítulos con timestamps exactos.
+Genera subttulos con timestamps exactos.
 """
 
 import os
@@ -41,10 +41,10 @@ def transcribe_audio(audio_path: str, language: str = None) -> list:
         })
 
     detected_lang = result.get("language", "desconocido")
-    print(f"[✓] Transcripción completa. Idioma detectado: {detected_lang}")
-    print(f"[✓] {len(segments)} segmentos encontrados")
+    print(f"[] Transcripcin completa. Idioma detectado: {detected_lang}")
+    print(f"[] {len(segments)} segmentos encontrados")
 
-    # Guardar transcripción como JSON
+    # Guardar transcripcin como JSON
     json_path = os.path.join(TEMP_DIR, "transcription.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump({
@@ -53,13 +53,13 @@ def transcribe_audio(audio_path: str, language: str = None) -> list:
             "full_text": result["text"]
         }, f, ensure_ascii=False, indent=2)
 
-    print(f"[✓] Transcripción guardada: {json_path}")
+    print(f"[] Transcripcin guardada: {json_path}")
     return segments
 
 
 def segments_to_srt(segments: list, output_path: str = None) -> str:
     """
-    Convierte segmentos a formato SRT de subtítulos.
+    Convierte segmentos a formato SRT de subttulos.
     """
     if output_path is None:
         output_path = os.path.join(TEMP_DIR, "subtitles_original.srt")
@@ -81,7 +81,7 @@ def segments_to_srt(segments: list, output_path: str = None) -> str:
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
-    print(f"[✓] Subtítulos SRT guardados: {output_path}")
+    print(f"[] Subttulos SRT guardados: {output_path}")
     return output_path
 
 
@@ -93,6 +93,6 @@ if __name__ == "__main__":
     segments = transcribe_audio(sys.argv[1])
     srt_path = segments_to_srt(segments)
 
-    print(f"\nTranscripción:")
+    print(f"\nTranscripcin:")
     for seg in segments:
         print(f"  [{seg['start']:.1f}s - {seg['end']:.1f}s] {seg['text']}")

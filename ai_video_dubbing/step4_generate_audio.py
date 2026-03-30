@@ -1,6 +1,6 @@
 """
 PASO 4: Generar audio con voz IA usando Edge TTS (Microsoft, gratuito).
-Cada segmento se genera con la duración correcta.
+Cada segmento se genera con la duracin correcta.
 """
 
 import asyncio
@@ -30,7 +30,7 @@ async def generate_segment_audio(text: str, output_path: str, voice: str = None)
 
 
 def get_audio_duration(audio_path: str) -> float:
-    """Obtiene la duración de un archivo de audio usando ffprobe."""
+    """Obtiene la duracin de un archivo de audio usando ffprobe."""
     cmd = [
         "ffprobe", "-v", "quiet",
         "-show_entries", "format=duration",
@@ -43,7 +43,7 @@ def get_audio_duration(audio_path: str) -> float:
 
 def adjust_audio_speed(input_path: str, output_path: str, target_duration: float) -> str:
     """
-    Ajusta la velocidad del audio para que coincida con la duración objetivo.
+    Ajusta la velocidad del audio para que coincida con la duracin objetivo.
     Usa ffmpeg atempo filter.
     """
     current_duration = get_audio_duration(input_path)
@@ -78,7 +78,7 @@ def adjust_audio_speed(input_path: str, output_path: str, target_duration: float
 
 async def generate_all_audio(segments: list, voice: str = None) -> list:
     """
-    Genera audio para todos los segmentos y ajusta la duración.
+    Genera audio para todos los segmentos y ajusta la duracin.
 
     Args:
         segments: Lista de segmentos reescritos
@@ -123,7 +123,7 @@ async def generate_all_audio(segments: list, voice: str = None) -> list:
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(audio_files, f, ensure_ascii=False, indent=2)
 
-    print(f"[✓] Audio generado para todos los segmentos")
+    print(f"[] Audio generado para todos los segmentos")
     return audio_files
 
 
@@ -170,7 +170,7 @@ def merge_audio_segments(audio_files: list, total_duration: float, output_path: 
         print(f"[!] Error combinando audio: {result.stderr[:500]}")
         raise RuntimeError("Error al combinar audio")
 
-    print(f"[✓] Audio combinado: {output_path}")
+    print(f"[] Audio combinado: {output_path}")
     return output_path
 
 
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     json_path = os.path.join(TEMP_DIR, "rewritten_segments.json")
 
     if not os.path.exists(json_path):
-        print("[!] No se encontró rewritten_segments.json. Ejecuta step3 primero.")
+        print("[!] No se encontr rewritten_segments.json. Ejecuta step3 primero.")
         sys.exit(1)
 
     with open(json_path, "r", encoding="utf-8") as f:
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     voice = sys.argv[1] if len(sys.argv) > 1 else None
     audio_files = asyncio.run(generate_all_audio(segments, voice))
 
-    print(f"\n[✓] {len(audio_files)} segmentos de audio generados")
+    print(f"\n[] {len(audio_files)} segmentos de audio generados")
     print(f"\nVoces disponibles:")
     for name, voice_id in TTS_VOICES.items():
         print(f"  {name}: {voice_id}")

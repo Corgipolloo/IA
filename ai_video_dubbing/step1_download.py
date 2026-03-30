@@ -15,7 +15,7 @@ def download_video(url: str, output_name: str = "video_original") -> str:
 
     Args:
         url: URL del video (YouTube, Vimeo, etc.)
-        output_name: Nombre del archivo de salida (sin extensión)
+        output_name: Nombre del archivo de salida (sin extensin)
 
     Returns:
         Ruta al archivo descargado
@@ -37,7 +37,7 @@ def download_video(url: str, output_name: str = "video_original") -> str:
 
     if result.returncode != 0:
         print(f"[!] Error descargando: {result.stderr}")
-        # Intentar formato más simple
+        # Intentar formato ms simple
         cmd_simple = [
             "yt-dlp",
             "--no-check-certificates",
@@ -50,7 +50,7 @@ def download_video(url: str, output_name: str = "video_original") -> str:
         if result.returncode != 0:
             raise RuntimeError(f"No se pudo descargar el video: {result.stderr}")
 
-    print(f"[✓] Video descargado: {output_path}")
+    print(f"[] Video descargado: {output_path}")
     return output_path
 
 
@@ -79,7 +79,7 @@ def extract_audio(video_path: str) -> str:
     if result.returncode != 0:
         raise RuntimeError(f"Error extrayendo audio: {result.stderr}")
 
-    print(f"[✓] Audio extraído: {audio_path}")
+    print(f"[] Audio extrado: {audio_path}")
     return audio_path
 
 
