@@ -1,0 +1,128 @@
+{
+  "name": "Doblar Video - Windows Local",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger",
+      "name": "Click para Iniciar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configura aqui tu video\nreturn [{\n  json: {\n    video_url: 'https://youtu.be/eOUfemUXMxk',\n    voice: 'es-ES-AlvaroNeural',\n    output_name: 'fogata_ryou_doblado',\n    project_dir: 'C:\\\\Users\\\\Emmanuel\\\\IA\\\\ai_video_dubbing'\n  }\n}];"
+      },
+      "id": "node-config",
+      "name": "1. Configuracion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "command": "=cd \"{{ $json.project_dir }}\" && python -c \"import sys, json; sys.path.insert(0,'.'); from step1_download import download_video, extract_audio; v = download_video('{{ $json.video_url }}', 'video_original'); a = extract_audio(v); print(json.dumps({'video_path': v, 'audio_path': a, 'video_url': '{{ $json.video_url }}', 'voice': '{{ $json.voice }}', 'output_name': '{{ $json.output_name }}', 'project_dir': '{{ $json.project_dir }}' }))\""
+      },
+      "id": "node-download",
+      "name": "2. Descargar Video",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "command": "=cd \"{{ $json.project_dir }}\" && python -c \"import sys, json; sys.path.insert(0,'.'); from step2_transcribe import transcribe_audio, segments_to_srt; segs = transcribe_audio('{{ $json.audio_path }}'); print(json.dumps({'segments': segs, 'video_path': '{{ $json.video_path }}', 'voice': '{{ $json.voice }}', 'output_name': '{{ $json.output_name }}', 'project_dir': '{{ $json.project_dir }}' }))\""
+      },
+      "id": "node-transcribe",
+      "name": "3. Transcribir Whisper",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "command": "=cd \"{{ $json.project_dir }}\" && python -c \"import sys, json, asyncio, os; sys.path.insert(0,'.'); from step3_rewrite_dialogue import rewrite_all_segments; from step5_compose_video import get_video_duration; segs = json.loads(r'''{{ JSON.stringify($json.segments) }}'''); rewritten = rewrite_all_segments(segs); vdur = get_video_duration('{{ $json.video_path }}'); print(json.dumps({'segments': rewritten, 'video_path': '{{ $json.video_path }}', 'video_duration': vdur, 'voice': '{{ $json.voice }}', 'output_name': '{{ $json.output_name }}', 'project_dir': '{{ $json.project_dir }}' }))\""
+      },
+      "id": "node-rewrite",
+      "name": "4. Reescribir Dialogos",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1180, 300]
+    },
+    {
+      "parameters": {
+        "command": "=cd \"{{ $json.project_dir }}\" && python -c \"\nimport sys, json, asyncio, os\nsys.path.insert(0,'.')\nfrom step4_generate_audio import generate_all_audio, merge_audio_segments\nfrom config import TEMP_DIR\nsegs = json.loads(r'''{{ JSON.stringify($json.segments) }}''')\naudio_files = asyncio.run(generate_all_audio(segs, '{{ $json.voice }}'))\ndubbed = os.path.join(TEMP_DIR, 'dubbed_audio.wav')\nmerge_audio_segments(audio_files, {{ $json.video_duration }}, dubbed)\nprint(json.dumps({'dubbed_audio': dubbed, 'video_path': '{{ $json.video_path }}', 'segments': segs, 'output_name': '{{ $json.output_name }}', 'project_dir': '{{ $json.project_dir }}' }))\n\""
+      },
+      "id": "node-tts",
+      "name": "5. Generar Voz IA",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1420, 300]
+    },
+    {
+      "parameters": {
+        "command": "=cd \"{{ $json.project_dir }}\" && python -c \"\nimport sys, json, os\nsys.path.insert(0,'.')\nfrom step5_compose_video import compose_final_video, create_subtitle_file\nfrom config import OUTPUT_DIR\nsegs = json.loads(r'''{{ JSON.stringify($json.segments) }}''')\nsub = create_subtitle_file(segs)\nfinal = compose_final_video('{{ $json.video_path }}', '{{ $json.dubbed_audio }}', sub, '{{ $json.output_name }}')\nprint(json.dumps({'final_video': final, 'success': True}))\n\""
+      },
+      "id": "node-compose",
+      "name": "6. Componer Video Final",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [1660, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{\n  json: {\n    success: true,\n    message: 'Video doblado listo!',\n    video: data.final_video,\n    instrucciones: 'Abre la carpeta output para ver tu video doblado'\n  }\n}];"
+      },
+      "id": "node-done",
+      "name": "7. Listo!",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1900, 300]
+    }
+  ],
+  "connections": {
+    "Click para Iniciar": {
+      "main": [
+        [{ "node": "1. Configuracion", "type": "main", "index": 0 }]
+      ]
+    },
+    "1. Configuracion": {
+      "main": [
+        [{ "node": "2. Descargar Video", "type": "main", "index": 0 }]
+      ]
+    },
+    "2. Descargar Video": {
+      "main": [
+        [{ "node": "3. Transcribir Whisper", "type": "main", "index": 0 }]
+      ]
+    },
+    "3. Transcribir Whisper": {
+      "main": [
+        [{ "node": "4. Reescribir Dialogos", "type": "main", "index": 0 }]
+      ]
+    },
+    "4. Reescribir Dialogos": {
+      "main": [
+        [{ "node": "5. Generar Voz IA", "type": "main", "index": 0 }]
+      ]
+    },
+    "5. Generar Voz IA": {
+      "main": [
+        [{ "node": "6. Componer Video Final", "type": "main", "index": 0 }]
+      ]
+    },
+    "6. Componer Video Final": {
+      "main": [
+        [{ "node": "7. Listo!", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1
+}
